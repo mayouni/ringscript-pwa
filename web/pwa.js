@@ -64,6 +64,9 @@
 
             ask("PwaOutboxDevice", opts.device || "device");
 
+            /* The in-flight flush, if any. See flush(). */
+            var inFlight = null;
+
             /* 2. anything left over from last time */
             try {
                 var saved = localStorage.getItem(storageKey);
@@ -98,9 +101,23 @@
                     return r;
                 },
 
-                /* try to send everything queued, one entry at a time so a
-                   half-successful flush leaves the rest queued */
+                /* Try to send everything queued, one entry at a time so a
+                   half-successful flush leaves the rest queued.
+
+                   Concurrent callers share one flush. Without this guard two
+                   overlapping calls — the online event and a Send button,
+                   say — both read the same entry as "queued" and both send
+                   it, which is precisely the duplicate this library exists
+                   to prevent. Found by clicking both within 100 ms. */
                 flush: function () {
+                    if (inFlight) { return inFlight; }
+                    inFlight = api.flushOnce();
+                    var clear = function () { inFlight = null; };
+                    inFlight.then(clear, clear);
+                    return inFlight;
+                },
+
+                flushOnce: function () {
                     var pending = ask("PwaOutboxList", 0).filter(function (e) { return e.state === "queued"; });
                     return Promise.all(pending.map(function (e) {
                         var p = ask("PwaOutboxPayload", e.id);

@@ -1,6 +1,6 @@
 {
   "name": "pwa",
-  "version": "1.0",
+  "version": "1.0.1",
   "ringscript": ">=0.9",
   "summary": "Install to the home screen, open with no network, and a durable outbox that survives a restart.",
   "ring": [
