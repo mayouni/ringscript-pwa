@@ -1,8 +1,8 @@
 {
   "name": "pwa",
-  "version": "1.0.1",
+  "version": "1.1.0",
   "ringscript": ">=0.9",
-  "summary": "Install to the home screen, open with no network, and a durable outbox that survives a restart.",
+  "summary": "Install to the home screen, open with no network, and a durable outbox with rollback - one entry at a time or a batch the server answers per entry.",
   "ring": [
     "ring/pwa.ring"
   ],
@@ -23,7 +23,11 @@
     "PwaOutboxSetState",
     "PwaOutboxForget",
     "PwaOutboxSnapshot",
-    "PwaOutboxRestore"
+    "PwaOutboxRestore",
+    "PwaOutboxBatch",
+    "PwaOutboxMarkSending",
+    "PwaOutboxApply",
+    "PwaOutboxRollbackAll"
   ],
   "global": "Pwa"
 }
