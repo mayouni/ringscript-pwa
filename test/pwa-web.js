@@ -214,6 +214,33 @@ class FakeEventSource {
         ok("a dead stream trips the alarm", pwa.rung() === "unreachable");
     }
 
+    /* ---- the custom-transport batch: ordered, all-or-rolled-back ------ */
+    {
+        const drv = failableDriver(), clk = manualClock();
+        const pwa = await Pwa.attach(await mk(), {
+            world: "t6", device: "d6", storage: drv,
+            now: clk.now, timer: clk.timer, ringSource: RING_SRC
+        });
+        const a = await pwa.queue("order", { n: 1 });
+        const b2 = await pwa.queue("order", { n: 2 });
+
+        let seen = null;
+        await pwa.flushBatch((batch) => {
+            seen = batch.entries.map(e => e.id);
+            return Promise.resolve({ results: [
+                { id: a.id, status: "accepted", note: "" },
+                { id: b2.id, status: "rejected", note: "no stock" }
+            ]});
+        });
+        ok("the app-owned batch keeps queue order", seen.join() === [a.id, b2.id].join());
+        ok("verdicts landed per entry",
+           pwa.list().find(e => e.id === b2.id).note === "no stock" && pwa.pending() === 0);
+
+        await pwa.queue("order", { n: 3 });
+        await pwa.flushBatch(() => Promise.reject(new Error("request died"))).catch(() => {});
+        ok("a failed batch REQUEST rolls everything back", pwa.pending() === 1);
+    }
+
     /* ---- oldest(), with injected time --------------------------------- */
     {
         const drv = failableDriver(), clk = manualClock();
