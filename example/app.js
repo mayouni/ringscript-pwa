@@ -17,9 +17,13 @@ function send(payload) {
 function render() {
     if (!pwa) { return; }
     var items = pwa.list();
+    var age = pwa.oldest();
     $("state").textContent =
         "connection " + (online ? "up" : "down") +
+        " · rung " + pwa.rung() +
         " · " + pwa.pending() + " waiting" +
+        (age > 0 ? " (oldest " + age + "s)" : "") +
+        (pwa.banner() ? " · " + pwa.banner() : "") +
         (pwa.install.available ? " · installable" : "");
     $("list").innerHTML = items.map(function (e) {
         return "<li>" + e.kind + " — " + e.state + "</li>";
@@ -31,6 +35,7 @@ async function boot() {
     var ring = await RingScript.load(wasm, { onOutput: function () {} });
 
     pwa = await Pwa.attach(ring, {
+        world: "pwa-example",          // the storage identity -- required in 2.0
         device: "example-1",
         sw: "sw.js",
         send: send,
@@ -38,7 +43,10 @@ async function boot() {
     });
 
     $("queue").addEventListener("click", function () {
-        pwa.queue("order", { at: Date.now() });
+        // queue() answers a Promise in 2.0: the entry is DURABLE before ok
+        pwa.queue("order", { at: Date.now() }).then(function (q) {
+            if (!q.ok) { alert(q.problem); }
+        });
     });
     $("flush").addEventListener("click", function () { pwa.flush(); });
     $("cut").addEventListener("click", function () {

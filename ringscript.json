@@ -1,8 +1,8 @@
 {
   "name": "pwa",
-  "version": "1.1.0",
+  "version": "2.0.0",
   "ringscript": ">=0.9",
-  "summary": "Install to the home screen, open with no network, and a durable outbox with rollback - one entry at a time or a batch the server answers per entry.",
+  "summary": "Partition-tolerant by default: a durable outbox with ordered idempotent replay, the degraded-mode rung readable by Ring rules, snapshot/stream with the 8-second alarm, and storage that names its origin risk.",
   "ring": [
     "ring/pwa.ring"
   ],
@@ -27,7 +27,11 @@
     "PwaOutboxBatch",
     "PwaOutboxMarkSending",
     "PwaOutboxApply",
-    "PwaOutboxRollbackAll"
+    "PwaOutboxRollbackAll",
+    "PwaRung",
+    "PwaRungSet",
+    "PwaOutboxOldest",
+    "PwaOutboxDrop"
   ],
   "global": "Pwa"
 }

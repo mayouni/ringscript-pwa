@@ -108,6 +108,37 @@ const ok=(n,c,d)=>{console.log((c?"  PASS  ":"  FAIL  ")+n+(c||d===undefined?"":
   ok("a pre-1.1 snapshot restores", call(vm4,"PwaOutboxRestore",old)===1);
   ok("...and gains an empty note rather than breaking",
      call(vm4,"PwaOutboxList",0)[0].note==="",call(vm4,"PwaOutboxList",0)[0]);
+  ok("...and an age of 0, never a fabricated one",
+     call(vm4,"PwaOutboxOldest",1755640000000)===0);
+
+  // ---- 2.0: the rung, ages, and the persist-failed rollback ------------
+  const vm5 = await mk();
+  ok("the boot rung is alone -- the server has not spoken",
+     call(vm5,"PwaRung",0)==="alone");
+  ok("the rung transitions", call(vm5,"PwaRungSet","streaming")==="streaming"
+     && call(vm5,"PwaRung",0)==="streaming");
+  ok("a nonsense rung is refused, state kept",
+     call(vm5,"PwaRungSet","panic")==="streaming");
+
+  ok("no queue, no age", call(vm5,"PwaOutboxOldest",1000000)===-1);
+  const t0 = 1755640000000;
+  const e1 = call(vm5,"PwaOutboxAdd",JSON.stringify([["kind","order"],["payload",1],["now",t0]]));
+  call(vm5,"PwaOutboxAdd",JSON.stringify([["kind","order"],["payload",2],["now",t0+90000]]));
+  ok("oldest reports the OLDEST queued entry, in seconds",
+     call(vm5,"PwaOutboxOldest",t0+240000)===240,call(vm5,"PwaOutboxOldest",t0+240000));
+  call(vm5,"PwaOutboxSent",e1.id);
+  ok("a sent entry no longer ages the queue",
+     call(vm5,"PwaOutboxOldest",t0+240000)===150);
+
+  const d=call(vm5,"PwaOutboxDrop",e1.id);
+  ok("drop removes an entry entirely", d.ok===1&&call(vm5,"PwaOutboxList",0).length===1);
+  ok("drop of a ghost is refused", call(vm5,"PwaOutboxDrop","nope").ok===0);
+
+  const snap5=vm5.call("PwaOutboxSnapshot",0).result;
+  const vm6=await mk();
+  call(vm6,"PwaOutboxRestore",snap5);
+  ok("the created stamp survives a restart",
+     call(vm6,"PwaOutboxOldest",t0+150000)===60);
 
   console.log(bad?"\n"+bad+" FAILED":"\nAll pwa.ring checks passed.");
   process.exit(bad?1:0);
